@@ -1,0 +1,858 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Wirth Bau – Bautagesbericht</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Barlow:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  :root {
+    --petrol: #1A6B78;
+    --petrol-dark: #124F59;
+    --petrol-light: #2A8A99;
+    --petrol-faint: rgba(26,107,120,0.12);
+    --black: #0D0D0D;
+    --dark: #141E20;
+    --surface: #192428;
+    --surface2: #1F2D30;
+    --border: #2A3D42;
+    --text: #EDF4F5;
+    --text-muted: #7A9DA3;
+    --text-dim: #3D5C62;
+    --green: #3DAA6A;
+    --red: #D94F4F;
+    --gold: #D4A017;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; }
+  body { font-family: 'Barlow', sans-serif; background: var(--black); color: var(--text); min-height: 100vh; font-size: 15px; }
+
+  /* ── HEADER ── */
+  .app-header { background: var(--dark); border-bottom: 3px solid var(--petrol); position: sticky; top: 0; z-index: 100; }
+  .header-inner { display: flex; align-items: center; justify-content: space-between; padding: 10px 16px; max-width: 720px; margin: 0 auto; gap: 12px; }
+  .logo-wrap { display: flex; align-items: center; gap: 10px; }
+  .logo-img { height: 38px; width: auto; object-fit: contain; }
+  .logo-sub { font-family: 'Barlow Condensed', sans-serif; font-size: 11px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; color: var(--text-muted); }
+  .hdr-right { text-align: right; flex-shrink: 0; }
+  .hdr-right strong { display: block; font-family: 'Barlow Condensed', sans-serif; font-size: 15px; font-weight: 700; color: var(--petrol-light); }
+  .hdr-right span { font-size: 11px; color: var(--text-muted); }
+
+  /* ── STEP NAV ── */
+  .steps-nav { background: var(--surface); border-bottom: 1px solid var(--border); overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  .steps-nav::-webkit-scrollbar { display: none; }
+  .steps-inner { display: flex; padding: 0 12px; max-width: 720px; margin: 0 auto; min-width: max-content; }
+  .step-btn { background: none; border: none; padding: 11px 13px; color: var(--text-dim); font-family: 'Barlow Condensed', sans-serif; font-size: 12px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; cursor: pointer; border-bottom: 3px solid transparent; transition: all 0.2s; white-space: nowrap; display: flex; align-items: center; gap: 6px; touch-action: manipulation; }
+  .step-btn .sn { width: 18px; height: 18px; border-radius: 50%; background: var(--border); color: var(--text-muted); font-size: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: all 0.2s; }
+  .step-btn.active { color: var(--petrol-light); border-bottom-color: var(--petrol); }
+  .step-btn.active .sn { background: var(--petrol); color: white; }
+  .step-btn.done .sn { background: var(--green); color: white; font-size: 9px; }
+
+  /* ── MAIN ── */
+  .main { max-width: 720px; margin: 0 auto; padding: 0 14px 130px; }
+  .section { display: none; padding-top: 18px; animation: fadeIn 0.2s ease; }
+  .section.active { display: block; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+  .sec-title { font-family: 'Barlow Condensed', sans-serif; font-size: 21px; font-weight: 800; color: var(--text); margin-bottom: 3px; display: flex; align-items: center; gap: 10px; }
+  .sec-icon { width: 30px; height: 30px; background: var(--petrol); display: flex; align-items: center; justify-content: center; font-size: 15px; clip-path: polygon(0 0,100% 0,100% 70%,85% 100%,0 100%); flex-shrink: 0; }
+  .sec-desc { font-size: 12px; color: var(--text-muted); margin-bottom: 18px; padding-left: 40px; }
+
+  /* ── CARD ── */
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 14px; margin-bottom: 10px; border-left: 3px solid var(--petrol); }
+  .card-title { font-family: 'Barlow Condensed', sans-serif; font-size: 12px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--petrol-light); margin-bottom: 11px; }
+
+  /* ── FORM ── */
+  .field { margin-bottom: 12px; }
+  .field:last-child { margin-bottom: 0; }
+  label { display: block; font-size: 10px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 4px; }
+  label .req { color: var(--petrol-light); }
+  input[type="text"], input[type="date"], input[type="time"], input[type="number"], select, textarea {
+    width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; color: var(--text);
+    font-family: 'Barlow', sans-serif; font-size: 15px; padding: 10px 12px; outline: none; transition: border-color 0.2s; -webkit-appearance: none; appearance: none;
+  }
+  input:focus, select:focus, textarea:focus { border-color: var(--petrol); box-shadow: 0 0 0 3px var(--petrol-faint); }
+  select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%237A9DA3' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; padding-right: 34px; }
+  textarea { resize: vertical; min-height: 88px; line-height: 1.5; }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+
+  /* ── PILLS ── */
+  .pill-group { display: flex; flex-wrap: wrap; gap: 7px; }
+  .pill { border: 1px solid var(--border); border-radius: 20px; padding: 7px 13px; font-size: 13px; cursor: pointer; transition: all 0.15s; color: var(--text-muted); background: var(--surface2); user-select: none; touch-action: manipulation; }
+  .pill.sel { background: var(--petrol-faint); border-color: var(--petrol); color: var(--text); }
+  .ab-group { display: flex; gap: 7px; }
+  .ab-pill { flex: 1; border: 1px solid var(--border); background: var(--surface2); color: var(--text-muted); border-radius: 6px; padding: 9px 6px; text-align: center; font-family: 'Barlow Condensed', sans-serif; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.15s; user-select: none; touch-action: manipulation; }
+  .ab-pill.sel { background: var(--petrol-faint); border-color: var(--petrol); color: var(--petrol-light); }
+
+  /* ── DYNAMIC ROWS ── */
+  .dyn-list { display: flex; flex-direction: column; gap: 7px; }
+  .dyn-row { background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; padding: 10px 11px; }
+
+  /* Personal */
+  .p-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+  .p-name { font-size: 15px; color: var(--text); font-weight: 500; background: none; border: none; outline: none; flex: 1; border-bottom: 1px solid var(--border); padding-bottom: 4px; color: var(--text); }
+  .p-name::placeholder { color: var(--text-dim); }
+  .p-times { display: grid; grid-template-columns: 1fr 1fr 70px 50px; gap: 6px; align-items: end; }
+  .p-times label { font-size: 10px; margin-bottom: 2px; letter-spacing: 0; text-transform: none; color: var(--text-muted); }
+  .p-times input { padding: 7px 8px; font-size: 14px; }
+  .hrs-badge { background: var(--petrol); color: white; font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 17px; border-radius: 4px; padding: 7px 4px; text-align: center; line-height: 1; }
+
+  /* Maschinen */
+  .m-grid { display: grid; grid-template-columns: 1fr; gap: 7px; }
+  .m-row-inner { display: grid; grid-template-columns: 1fr 75px 75px 50px; gap: 6px; align-items: end; }
+  .m-row-inner label { font-size: 10px; margin-bottom: 2px; letter-spacing: 0; text-transform: none; }
+  .m-row-inner input { padding: 7px 8px; font-size: 14px; }
+  .m-hrs { background: var(--petrol-dark); color: var(--petrol-light); font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 17px; border-radius: 4px; padding: 7px 4px; text-align: center; line-height: 1; border: 1px solid var(--petrol); }
+
+  /* Material */
+  .mat-inner { display: grid; grid-template-columns: 1fr 75px 72px 28px; gap: 6px; align-items: end; }
+  .mat-inner label { font-size: 10px; margin-bottom: 2px; }
+  .mat-inner input, .mat-inner select { padding: 7px 8px; font-size: 14px; }
+  .ent-inner { display: grid; grid-template-columns: 1fr 75px 72px 28px; gap: 6px; align-items: end; }
+  .ent-inner label { font-size: 10px; margin-bottom: 2px; }
+
+  .del-btn { background: none; border: 1px solid var(--border); border-radius: 4px; color: var(--text-dim); width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 13px; transition: all 0.15s; align-self: center; touch-action: manipulation; flex-shrink: 0; }
+  .del-btn:active { border-color: var(--red); color: var(--red); }
+  .add-btn { background: none; border: 1px dashed var(--petrol-dark); border-radius: 6px; color: var(--petrol-light); font-family: 'Barlow Condensed', sans-serif; font-size: 14px; font-weight: 600; padding: 10px; width: 100%; cursor: pointer; transition: all 0.15s; display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 7px; touch-action: manipulation; }
+  .add-btn:active { background: var(--petrol-faint); }
+
+  .tot-row { background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; padding: 9px 13px; display: flex; justify-content: space-between; align-items: center; margin-top: 7px; }
+  .tot-row span { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text-muted); }
+  .tot-row strong { font-family: 'Barlow Condensed', sans-serif; font-size: 21px; font-weight: 800; color: var(--petrol-light); }
+
+  /* ── BOTTOM NAV ── */
+  .bnav-wrap { position: fixed; bottom: 0; left: 0; right: 0; z-index: 100; background: var(--dark); border-top: 1px solid var(--border); }
+  .bnav { max-width: 720px; margin: 0 auto; padding: 11px 14px; display: flex; gap: 9px; }
+  .btn { flex: 1; padding: 13px; border-radius: 8px; font-family: 'Barlow Condensed', sans-serif; font-size: 16px; font-weight: 700; letter-spacing: 0.5px; cursor: pointer; border: none; transition: all 0.15s; touch-action: manipulation; }
+  .btn-sec { background: var(--surface); color: var(--text-muted); border: 1px solid var(--border); }
+  .btn-pri { background: var(--petrol); color: white; }
+  .btn-pri:active { background: var(--petrol-dark); }
+  .btn-grn { background: var(--green); color: white; }
+
+  /* ── SUMMARY ── */
+  .prev-header { background: linear-gradient(135deg, var(--petrol) 0%, var(--petrol-dark) 100%); border-radius: 8px; padding: 18px 20px; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .ph-logo { height: 44px; width: auto; object-fit: contain; filter: brightness(0) invert(1); }
+  .ph-right { text-align: right; }
+  .ph-title { font-family: 'Barlow Condensed', sans-serif; font-size: 22px; font-weight: 800; color: white; }
+  .ph-sub { font-size: 12px; color: rgba(255,255,255,0.7); margin-top: 2px; }
+  .sum-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .sum-table td { padding: 7px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  .sum-table td:first-child { color: var(--text-muted); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; width: 36%; }
+
+  /* ── SEND AREA ── */
+  .send-btn { width: 100%; padding: 14px; border-radius: 8px; font-family: 'Barlow Condensed', sans-serif; font-size: 17px; font-weight: 700; cursor: pointer; border: none; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 9px; margin-bottom: 9px; touch-action: manipulation; }
+  .sb-sheets { background: #0F9D58; color: white; }
+  .sb-pdf { background: var(--petrol); color: white; }
+  .sb-reset { background: var(--surface); color: var(--text-muted); border: 1px solid var(--border); font-size: 14px; padding: 11px; }
+  .setup-card { background: rgba(26,107,120,0.1); border: 1px solid rgba(26,107,120,0.35); border-radius: 8px; padding: 14px; margin-bottom: 12px; }
+  .setup-card .card-title { color: var(--petrol-light); }
+  .url-row { display: flex; gap: 7px; }
+  .url-row input { flex: 1; font-size: 12px; }
+  .url-save { background: var(--petrol); color: white; border: none; border-radius: 6px; padding: 0 14px; font-family: 'Barlow Condensed', sans-serif; font-size: 14px; font-weight: 700; cursor: pointer; white-space: nowrap; touch-action: manipulation; }
+
+  /* ── TOAST ── */
+  .toast { position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%) translateY(10px); background: var(--green); color: white; padding: 9px 20px; border-radius: 20px; font-family: 'Barlow Condensed', sans-serif; font-size: 15px; font-weight: 600; opacity: 0; transition: all 0.3s; z-index: 999; pointer-events: none; white-space: nowrap; }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .toast.err { background: var(--red); }
+
+  .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 0.7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .mb0 { margin-bottom: 0 !important; }
+
+  @media (max-width: 380px) {
+    .p-times { grid-template-columns: 1fr 1fr; }
+    .m-row-inner { grid-template-columns: 1fr 65px 65px 44px; }
+  }
+</style>
+</head>
+<body>
+
+<header class="app-header">
+  <div class="header-inner">
+    <div class="logo-wrap">
+      <img class="logo-img" src="https://www.wirthbau.de/site_elements/wirthbau_logo.png" alt="Wirth Bau" onerror="this.style.display='none';document.getElementById('logo-fallback').style.display='flex'">
+      <div id="logo-fallback" style="display:none;width:36px;height:36px;background:var(--petrol);align-items:center;justify-content:center;font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:17px;color:white;clip-path:polygon(0 0,100% 0,100% 75%,85% 100%,0 100%)">WB</div>
+      <div class="logo-sub">Bautagesbericht</div>
+    </div>
+    <div class="hdr-right">
+      <strong id="hdr-date">–</strong>
+      <span id="hdr-bs">–</span>
+    </div>
+  </div>
+</header>
+
+<nav class="steps-nav">
+  <div class="steps-inner">
+    <button class="step-btn active" onclick="goTo(0)" id="sb0"><span class="sn">1</span> Kopfdaten</button>
+    <button class="step-btn" onclick="goTo(1)" id="sb1"><span class="sn">2</span> Personal</button>
+    <button class="step-btn" onclick="goTo(2)" id="sb2"><span class="sn">3</span> Maschinen</button>
+    <button class="step-btn" onclick="goTo(3)" id="sb3"><span class="sn">4</span> Material</button>
+    <button class="step-btn" onclick="goTo(4)" id="sb4"><span class="sn">5</span> Leistung</button>
+    <button class="step-btn" onclick="goTo(5)" id="sb5"><span class="sn">6</span> Senden</button>
+  </div>
+</nav>
+
+<main class="main">
+
+  <!-- STEP 1 -->
+  <section class="section active" id="sec-0">
+    <div class="sec-title"><div class="sec-icon">📋</div>Kopfdaten</div>
+    <p class="sec-desc">Grundinformationen zum heutigen Bautag</p>
+    <div class="card">
+      <div class="card-title">📍 Baustelle</div>
+      <div class="row2">
+        <div class="field"><label>Datum <span class="req">*</span></label><input type="date" id="datum" oninput="updateHeader()"></div>
+        <div class="field"><label>Abrechnungsart</label>
+          <div class="ab-group">
+            <div class="ab-pill sel" onclick="selAb(this,'Tagessatz')">Tagessatz</div>
+            <div class="ab-pill" onclick="selAb(this,'Regie')">Regie</div>
+            <div class="ab-pill" onclick="selAb(this,'Pauschal')">Pauschal</div>
+          </div>
+        </div>
+      </div>
+      <div class="field"><label>Auftraggeber <span class="req">*</span></label><input type="text" id="auftraggeber" value="VG Werke Herrstein" oninput="updateHeader()"></div>
+      <div class="row2">
+        <div class="field"><label>Straße / Baustelle</label><input type="text" id="strasse" value="Bergstraße 4 und 5" oninput="updateHeader()"></div>
+        <div class="field"><label>PLZ / Ort</label><input type="text" id="plzort" value="55743 Hintertiefenbach"></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label>Art der Baustelle</label>
+          <select id="art"><option>Wasser</option><option>Straße</option><option>Kanal</option><option>Gas</option><option>Tiefbau</option><option>Sonstiges</option></select>
+        </div>
+        <div class="field"><label>Ansprechpartner</label><input type="text" id="ansp" value="Herr Conrad"></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">🌤️ Wetter</div>
+      <div class="pill-group" id="wpills">
+        <div class="pill sel" onclick="selW(this,'Sonnig')">☀️ Sonnig</div>
+        <div class="pill" onclick="selW(this,'Bewölkt')">⛅ Bewölkt</div>
+        <div class="pill" onclick="selW(this,'Bedeckt')">🌥️ Bedeckt</div>
+        <div class="pill" onclick="selW(this,'Regen')">🌧️ Regen</div>
+        <div class="pill" onclick="selW(this,'Sturm')">⛈️ Sturm</div>
+        <div class="pill" onclick="selW(this,'Schnee')">❄️ Schnee</div>
+        <div class="pill" onclick="selW(this,'Frost')">🥶 Frost</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">⏰ Arbeitszeit</div>
+      <div class="row2">
+        <div class="field"><label>Von</label><input type="time" id="az-von" value="07:00"></div>
+        <div class="field"><label>Bis</label><input type="time" id="az-bis" value="16:00"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- STEP 2: PERSONAL -->
+  <section class="section" id="sec-1">
+    <div class="sec-title"><div class="sec-icon">👷</div>Personal</div>
+    <p class="sec-desc">Eingesetztes Personal mit Arbeitszeiten</p>
+    <div class="card">
+      <div class="card-title">👷 Mitarbeiter</div>
+      <div class="dyn-list" id="personal-list"></div>
+      <button class="add-btn" onclick="addPersonal()">+ Mitarbeiter hinzufügen</button>
+      <div class="tot-row"><span>Gesamtstunden Personal</span><strong id="tot-p">0,0 Std.</strong></div>
+    </div>
+  </section>
+
+  <!-- STEP 3: MASCHINEN -->
+  <section class="section" id="sec-2">
+    <div class="sec-title"><div class="sec-icon">🚜</div>Maschinen</div>
+    <p class="sec-desc">Eingesetzte Maschinen und Geräte</p>
+    <div class="card">
+      <div class="card-title">🚜 Maschineneinsatz</div>
+      <div class="dyn-list" id="maschinen-list"></div>
+      <button class="add-btn" onclick="addMaschine()">+ Maschine hinzufügen</button>
+      <div class="tot-row"><span>Gesamtstunden Maschinen</span><strong id="tot-m">0,0 Std.</strong></div>
+    </div>
+  </section>
+
+  <!-- STEP 4: MATERIAL -->
+  <section class="section" id="sec-3">
+    <div class="sec-title"><div class="sec-icon">🧱</div>Material</div>
+    <p class="sec-desc">Verbautes Material und Entsorgung</p>
+    <div class="card">
+      <div class="card-title">📦 Verbautes Material</div>
+      <div class="dyn-list" id="material-list"></div>
+      <button class="add-btn" onclick="addMaterial()">+ Material hinzufügen</button>
+    </div>
+    <div class="card">
+      <div class="card-title">🚛 Aushub / Entsorgung</div>
+      <div class="dyn-list" id="entsorgung-list"></div>
+      <button class="add-btn" onclick="addEntsorgung()">+ Entsorgung hinzufügen</button>
+    </div>
+  </section>
+
+  <!-- STEP 5: LEISTUNG -->
+  <section class="section" id="sec-4">
+    <div class="sec-title"><div class="sec-icon">📝</div>Leistung & Notizen</div>
+    <p class="sec-desc">Tätigkeiten, Besonderheiten und Absprachen</p>
+    <div class="card">
+      <div class="card-title">⚒️ Erbrachte Leistung</div>
+      <div class="field mb0"><label>Leistung / Abrechenbare Positionen / Fremdleistungen</label>
+        <textarea id="leistung" rows="5" placeholder="Heute erbrachte Leistungen..."></textarea>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">⚠️ Besonderheiten / Absprachen</div>
+      <div class="field mb0"><label>Besonderheiten / Änderungen / Absprachen</label>
+        <textarea id="besonderheiten" rows="4" placeholder="Besonderheiten, Änderungen oder Absprachen..."></textarea>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">✍️ Polier / Bauleiter</div>
+      <div class="field mb0"><label>Name</label><input type="text" id="polier" placeholder="Name des Poliers / Bauleiters"></div>
+    </div>
+  </section>
+
+  <!-- STEP 6: SENDEN -->
+  <section class="section" id="sec-5">
+    <div class="sec-title"><div class="sec-icon">📤</div>Senden & PDF</div>
+    <p class="sec-desc">Bericht absenden und als PDF speichern</p>
+
+    <div class="setup-card">
+      <div class="card-title">⚙️ Google Sheets Verbindung</div>
+      <p style="font-size:12px;color:var(--text-muted);margin-bottom:9px">Einmalig: Web App URL aus Google Apps Script eintragen.</p>
+      <div class="url-row">
+        <input type="text" id="sheets-url" placeholder="https://script.google.com/macros/s/..." style="font-size:12px">
+        <button class="url-save" onclick="saveUrl()">Speichern</button>
+      </div>
+      <div id="url-status" style="margin-top:7px;font-size:12px;color:var(--text-muted)"></div>
+    </div>
+
+    <div class="prev-header">
+      <div>
+        <div class="ph-title">Bau-Tagesbericht</div>
+        <div class="ph-sub" id="prev-date">–</div>
+        <div class="ph-sub" id="prev-bs">–</div>
+      </div>
+      <img class="ph-logo" src="https://www.wirthbau.de/site_elements/wirthbau_logo.png" alt="WB" onerror="this.style.display='none'">
+    </div>
+
+    <div class="card">
+      <div class="card-title">📋 Zusammenfassung</div>
+      <table class="sum-table"><tbody id="sum-tbody"></tbody></table>
+    </div>
+
+    <button class="send-btn sb-sheets" id="btn-sheets" onclick="sendToSheets()">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M19.5 3h-15A1.5 1.5 0 003 4.5v15A1.5 1.5 0 004.5 21h15a1.5 1.5 0 001.5-1.5v-15A1.5 1.5 0 0019.5 3zm-9 13.5H7.5V15H10.5v1.5zm0-3H7.5V12H10.5v1.5zm0-3H7.5V9H10.5v1.5zm6 6H13.5V15H16.5v1.5zm0-3H13.5V12H16.5v1.5zm0-3H13.5V9H16.5v1.5z"/></svg>
+      An Google Sheets senden
+    </button>
+    <button class="send-btn sb-pdf" onclick="generatePDF()">📄 PDF herunterladen</button>
+    <button class="send-btn sb-reset" onclick="resetForm()">🔄 Neuen Bericht anlegen</button>
+  </section>
+
+</main>
+
+<div class="bnav-wrap">
+  <div class="bnav">
+    <button class="btn btn-sec" id="btn-back" onclick="goBack()" style="display:none">← Zurück</button>
+    <button class="btn btn-pri" id="btn-next" onclick="goNext()">Weiter →</button>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const LOGO_URL = 'https://www.wirthbau.de/site_elements/wirthbau_logo.png';
+let step = 0, abr = 'Tagessatz', wetter = 'Sonnig';
+
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('datum').value = new Date().toISOString().split('T')[0];
+  updateHeader();
+  addPersonal('R. Marino'); addPersonal('P. Pyrzewicz'); addPersonal('Pawel Buczulinski');
+  addMaschine('Bagger'); addMaschine('LKW'); addMaschine('Monteurfahrzeug');
+  addMaterial('Frostschutz'); addMaterial('Split 2/8');
+  addEntsorgung('Erdaushub');
+  const u = localStorage.getItem('wb_url') || '';
+  if (u) { document.getElementById('sheets-url').value = u; document.getElementById('url-status').innerHTML = '<span style="color:var(--green)">✓ Verbunden</span>'; }
+});
+
+// NAV
+function goTo(s) {
+  if (s === 5) buildSummary();
+  document.getElementById(`sec-${step}`).classList.remove('active');
+  const pb = document.getElementById(`sb${step}`);
+  pb.classList.remove('active'); pb.classList.add('done'); pb.querySelector('.sn').textContent = '✓';
+  step = s;
+  document.getElementById(`sec-${step}`).classList.add('active');
+  const cb = document.getElementById(`sb${step}`);
+  cb.classList.add('active'); cb.classList.remove('done');
+  document.getElementById('btn-back').style.display = step > 0 ? 'flex' : 'none';
+  const nb = document.getElementById('btn-next');
+  if (step === 5) { nb.textContent = '✓ Fertig'; nb.className = 'btn btn-grn'; }
+  else { nb.textContent = 'Weiter →'; nb.className = 'btn btn-pri'; }
+  window.scrollTo(0,0);
+}
+function goNext() { if (step < 5) goTo(step + 1); }
+function goBack() { if (step > 0) goTo(step - 1); }
+
+function updateHeader() {
+  const d = document.getElementById('datum').value;
+  if (d) document.getElementById('hdr-date').textContent = new Date(d+'T00:00:00').toLocaleDateString('de-DE',{weekday:'short',day:'2-digit',month:'2-digit',year:'numeric'});
+  document.getElementById('hdr-bs').textContent = document.getElementById('strasse').value || '–';
+}
+function selW(el, v) { document.querySelectorAll('#wpills .pill').forEach(p=>p.classList.remove('sel')); el.classList.add('sel'); wetter=v; }
+function selAb(el, v) { document.querySelectorAll('.ab-pill').forEach(p=>p.classList.remove('sel')); el.classList.add('sel'); abr=v; }
+
+// PERSONAL
+function addPersonal(name='') {
+  const list = document.getElementById('personal-list');
+  const d = document.createElement('div'); d.className = 'dyn-row';
+  d.innerHTML = `
+    <div class="p-header">
+      <input class="p-name" type="text" placeholder="Name Mitarbeiter" value="${name}" oninput="calcP(this.closest('.dyn-row'))">
+      <button class="del-btn" onclick="this.closest('.dyn-row').remove();updTotP()" style="margin-left:8px;flex-shrink:0">✕</button>
+    </div>
+    <div class="p-times">
+      <div><label>Von</label><input type="time" value="07:00" oninput="calcP(this.closest('.dyn-row'))"></div>
+      <div><label>Bis</label><input type="time" value="16:00" oninput="calcP(this.closest('.dyn-row'))"></div>
+      <div><label>Pause (h)</label><input type="number" value="0.5" min="0" max="4" step="0.25" oninput="calcP(this.closest('.dyn-row'))"></div>
+      <div style="text-align:center"><label>Std.</label><div class="hrs-badge">8,5</div></div>
+    </div>`;
+  list.appendChild(d); calcP(d);
+}
+function calcP(row) {
+  const t = row.querySelectorAll('input[type="time"]');
+  const pause = parseFloat(row.querySelector('input[type="number"]')?.value||0);
+  const badge = row.querySelector('.hrs-badge'); if (!badge || !t[0]) return;
+  const [h1,m1]=t[0].value.split(':').map(Number), [h2,m2]=t[1].value.split(':').map(Number);
+  let tot = ((h2*60+m2)-(h1*60+m1))/60 - pause; if (tot<0) tot=0;
+  badge.textContent = tot.toFixed(1).replace('.',','); updTotP();
+}
+function updTotP() {
+  let s=0; document.querySelectorAll('#personal-list .hrs-badge').forEach(b=>s+=parseFloat(b.textContent.replace(',','.'))||0);
+  document.getElementById('tot-p').textContent = s.toFixed(1).replace('.',',')+' Std.';
+}
+
+// MASCHINEN
+function addMaschine(name='') {
+  const list = document.getElementById('maschinen-list');
+  const d = document.createElement('div'); d.className = 'dyn-row';
+  d.innerHTML = `
+    <div class="m-row-inner">
+      <div><label>Maschine / Gerät</label><input type="text" value="${name}" placeholder="z.B. Bagger..." oninput="calcM(this.closest('.dyn-row'))"></div>
+      <div><label>Von</label><input type="time" value="07:00" oninput="calcM(this.closest('.dyn-row'))"></div>
+      <div><label>Bis</label><input type="time" value="16:00" oninput="calcM(this.closest('.dyn-row'))"></div>
+      <div style="text-align:center"><label>Std.</label><div class="m-hrs">9,0</div></div>
+    </div>
+    <div style="display:flex;justify-content:flex-end;margin-top:6px">
+      <button class="del-btn" onclick="this.closest('.dyn-row').remove();updTotM()">✕</button>
+    </div>`;
+  list.appendChild(d); calcM(d);
+}
+function calcM(row) {
+  const t = row.querySelectorAll('input[type="time"]');
+  const badge = row.querySelector('.m-hrs'); if (!badge || !t[0]) return;
+  const [h1,m1]=t[0].value.split(':').map(Number), [h2,m2]=t[1].value.split(':').map(Number);
+  let tot = ((h2*60+m2)-(h1*60+m1))/60; if (tot<0) tot=0;
+  badge.textContent = tot.toFixed(1).replace('.',','); updTotM();
+}
+function updTotM() {
+  let s=0; document.querySelectorAll('#maschinen-list .m-hrs').forEach(b=>s+=parseFloat(b.textContent.replace(',','.'))||0);
+  document.getElementById('tot-m').textContent = s.toFixed(1).replace('.',',')+' Std.';
+}
+
+// MATERIAL
+const MAT=['Frostschutz','Asphalttragschicht','Asphaltdeckschicht','Split 2/8','Sand','Fugenband','0/100','Beton','Pflastersteine','Sonstiges'];
+const EIN=['m³','T','m','m²','Stk.','l','kg'];
+function addMaterial(name='') {
+  const d = document.createElement('div'); d.className = 'dyn-row';
+  const opts = MAT.map(o=>`<option${o===name?' selected':''}>${o}</option>`).join('');
+  const eopts = EIN.map(o=>`<option>${o}</option>`).join('');
+  d.innerHTML = `<div class="mat-inner">
+    <div><label>Material</label><select>${opts}</select></div>
+    <div><label>Menge</label><input type="number" placeholder="0" min="0" step="0.01"></div>
+    <div><label>Einheit</label><select>${eopts}</select></div>
+    <button class="del-btn" onclick="this.closest('.dyn-row').remove()" style="margin-top:18px">✕</button>
+  </div>`;
+  document.getElementById('material-list').appendChild(d);
+}
+function addEntsorgung(name='') {
+  const d = document.createElement('div'); d.className = 'dyn-row';
+  const eopts = EIN.map(o=>`<option>${o}</option>`).join('');
+  d.innerHTML = `<div class="ent-inner">
+    <div><label>Material / Aushub</label><input type="text" value="${name}" placeholder="Erdaushub..."></div>
+    <div><label>Menge</label><input type="number" placeholder="0" min="0" step="0.01"></div>
+    <div><label>Einheit</label><select>${eopts}</select></div>
+    <button class="del-btn" onclick="this.closest('.dyn-row').remove()" style="margin-top:18px">✕</button>
+  </div>`;
+  document.getElementById('entsorgung-list').appendChild(d);
+}
+
+// COLLECT
+function collectData() {
+  const personal=[], maschinen=[], material=[], entsorgung=[];
+  document.querySelectorAll('#personal-list .dyn-row').forEach(r=>{
+    const n=r.querySelector('.p-name')?.value||'';
+    const t=r.querySelectorAll('input[type="time"]');
+    const p=r.querySelector('input[type="number"]')?.value||'0';
+    const h=r.querySelector('.hrs-badge')?.textContent||'0';
+    personal.push({name:n,von:t[0]?.value||'',bis:t[1]?.value||'',pause:p,stunden:h});
+  });
+  document.querySelectorAll('#maschinen-list .dyn-row').forEach(r=>{
+    const n=r.querySelector('input[type="text"]')?.value||'';
+    const t=r.querySelectorAll('input[type="time"]');
+    const h=r.querySelector('.m-hrs')?.textContent||'0';
+    maschinen.push({name:n,von:t[0]?.value||'',bis:t[1]?.value||'',stunden:h});
+  });
+  document.querySelectorAll('#material-list .dyn-row').forEach(r=>{
+    const s=r.querySelectorAll('select'); const n=r.querySelector('input[type="number"]');
+    material.push({name:s[0]?.value||'',menge:n?.value||'',einheit:s[1]?.value||''});
+  });
+  document.querySelectorAll('#entsorgung-list .dyn-row').forEach(r=>{
+    const n=r.querySelector('input[type="text"]'); const m=r.querySelector('input[type="number"]'); const e=r.querySelector('select');
+    entsorgung.push({name:n?.value||'',menge:m?.value||'',einheit:e?.value||''});
+  });
+  return {
+    datum:document.getElementById('datum').value,
+    auftraggeber:document.getElementById('auftraggeber').value,
+    strasse:document.getElementById('strasse').value,
+    plzort:document.getElementById('plzort').value,
+    art:document.getElementById('art').value,
+    ansprechpartner:document.getElementById('ansp').value,
+    wetter, abrechnungsart:abr,
+    azVon:document.getElementById('az-von').value,
+    azBis:document.getElementById('az-bis').value,
+    gesamtstundenPersonal:document.getElementById('tot-p').textContent,
+    gesamtstundenMaschinen:document.getElementById('tot-m').textContent,
+    personal, maschinen, material, entsorgung,
+    leistung:document.getElementById('leistung').value,
+    besonderheiten:document.getElementById('besonderheiten').value,
+    polier:document.getElementById('polier').value
+  };
+}
+
+// SUMMARY
+function buildSummary() {
+  const data = collectData();
+  const d = data.datum ? new Date(data.datum+'T00:00:00').toLocaleDateString('de-DE',{weekday:'long',day:'2-digit',month:'long',year:'numeric'}) : '–';
+  document.getElementById('prev-date').textContent = d;
+  document.getElementById('prev-bs').textContent = data.strasse;
+  const rows=[
+    ['Datum',d],['Auftraggeber',data.auftraggeber],
+    ['Baustelle',data.strasse+', '+data.plzort],
+    ['Art',data.art],['Ansprechpartner',data.ansprechpartner],
+    ['Wetter',data.wetter],['Abrechnung',data.abrechnungsart],
+    ['Arbeitszeit',data.azVon+' – '+data.azBis+' Uhr'],
+    ['Personal Std.',data.gesamtstundenPersonal],
+    ['Maschinen Std.',data.gesamtstundenMaschinen],
+    ['Personal',data.personal.map(p=>`${p.name} (${p.von}–${p.bis}, ${p.stunden} Std.)`).join('\n')||'–'],
+    ['Maschinen',data.maschinen.map(m=>`${m.name}: ${m.stunden} Std.`).join('\n')||'–'],
+    ['Material',data.material.map(m=>`${m.name}: ${m.menge} ${m.einheit}`).join('\n')||'–'],
+    ['Entsorgung',data.entsorgung.map(e=>`${e.name}: ${e.menge} ${e.einheit}`).join('\n')||'–'],
+    ['Leistung',data.leistung||'–'],['Besonderheiten',data.besonderheiten||'–'],
+    ['Polier',data.polier||'–']
+  ];
+  document.getElementById('sum-tbody').innerHTML = rows.map(([k,v])=>`<tr><td>${k}</td><td style="white-space:pre-line">${v}</td></tr>`).join('');
+  const u=localStorage.getItem('wb_url')||'';
+  if(u){document.getElementById('sheets-url').value=u;document.getElementById('url-status').innerHTML='<span style="color:var(--green)">✓ Verbunden</span>';}
+}
+
+// URL
+function saveUrl() {
+  const u=document.getElementById('sheets-url').value.trim();
+  if(!u.startsWith('https://script.google.com')){document.getElementById('url-status').innerHTML='<span style="color:var(--red)">✗ Ungültige URL</span>';return;}
+  localStorage.setItem('wb_url',u);
+  document.getElementById('url-status').innerHTML='<span style="color:var(--green)">✓ Gespeichert</span>';
+  showToast('✓ URL gespeichert');
+}
+
+// SEND
+async function sendToSheets() {
+  const u=localStorage.getItem('wb_url')||'';
+  if(!u){showToast('⚠️ Google Sheets URL fehlt!',true);return;}
+  const btn=document.getElementById('btn-sheets');
+  btn.innerHTML='<div class="spinner"></div> Wird gesendet...'; btn.disabled=true;
+  try {
+    await fetch(u,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/json'},body:JSON.stringify(collectData())});
+    btn.innerHTML='✅ Erfolgreich gesendet!'; btn.style.background='#0B8043';
+    showToast('✅ In Google Sheets gespeichert!');
+    setTimeout(()=>{btn.innerHTML='<svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M19.5 3h-15A1.5 1.5 0 003 4.5v15A1.5 1.5 0 004.5 21h15a1.5 1.5 0 001.5-1.5v-15A1.5 1.5 0 0019.5 3zm-9 13.5H7.5V15H10.5v1.5zm0-3H7.5V12H10.5v1.5zm0-3H7.5V9H10.5v1.5zm6 6H13.5V15H16.5v1.5zm0-3H13.5V12H16.5v1.5zm0-3H13.5V9H16.5v1.5z"/></svg> An Google Sheets senden';btn.style.background='';btn.disabled=false;},3000);
+  } catch(e) {
+    btn.innerHTML='✗ Fehler'; btn.style.background='var(--red)'; btn.disabled=false;
+    showToast('Fehler beim Senden',true);
+    setTimeout(()=>{btn.innerHTML='An Google Sheets senden';btn.style.background='';},3000);
+  }
+}
+
+// ══════════════════════════════════════════
+//  PDF – HOCHFORMAT, DIN A4, WIE ORIGINAL
+// ══════════════════════════════════════════
+async function generatePDF() {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  const data = collectData();
+
+  const W = 210, H = 297, M = 12, CW = W - 2*M; // usable width = 186mm
+  let y = M;
+
+  const PETROL   = [26, 107, 120];
+  const PETROL_D = [18,  79,  89];
+  const WHITE    = [255,255,255];
+  const BLACK    = [0,0,0];
+  const DGRAY    = [50,50,50];
+  const LGRAY    = [240,240,240];
+  const MGRAY    = [200,200,200];
+  const PETROL_L = [220,240,243];
+
+  const fmtD = (iso) => { if(!iso) return '–'; const p=iso.split('-'); return `${p[2]}.${p[1]}.${p[0]}`; };
+  const datumText = fmtD(data.datum);
+
+  // helpers
+  const rf = (x,yw,w,h,col) => { doc.setFillColor(...col); doc.rect(x,yw,w,h,'F'); };
+  const rfs = (x,yw,w,h,fill,stroke,sw=0.3) => {
+    doc.setFillColor(...fill); doc.setDrawColor(...stroke); doc.setLineWidth(sw);
+    doc.rect(x,yw,w,h,'FD');
+  };
+  const tx = (t,x,yw,o={}) => {
+    doc.setFontSize(o.sz||9); doc.setFont('helvetica',o.b?'bold':'normal');
+    doc.setTextColor(...(o.c||BLACK));
+    if (o.al) doc.text(String(t),x,yw,{align:o.al}); else doc.text(String(t),x,yw);
+  };
+  const ln = (x1,y1,x2,y2,c=MGRAY,w=0.2) => { doc.setDrawColor(...c); doc.setLineWidth(w); doc.line(x1,y1,x2,y2); };
+  const box = (x,yw,w,h,c=MGRAY) => { doc.setDrawColor(...c); doc.setLineWidth(0.3); doc.rect(x,yw,w,h,'S'); };
+
+  // ── LOGO (async load) ──
+  let logoDataUrl = null;
+  try {
+    const resp = await fetch(LOGO_URL);
+    const blob = await resp.blob();
+    logoDataUrl = await new Promise(res => {
+      const fr = new FileReader(); fr.onload = () => res(fr.result); fr.readAsDataURL(blob);
+    });
+  } catch(e) { logoDataUrl = null; }
+
+  // ── ZEILE 1: TITEL + LOGO ──
+  // Titel links
+  tx('Bau- Tagesbericht', M, y+7, {sz:18, b:true, c:BLACK});
+  // Logo oben rechts
+  if (logoDataUrl) {
+    try { doc.addImage(logoDataUrl, 'PNG', W-M-38, y, 38, 16); } catch(e){}
+  } else {
+    rf(W-M-38, y, 38, 16, PETROL);
+    tx('WIRTHBAU', W-M-19, y+7, {sz:9, b:true, c:WHITE, al:'center'});
+    tx('GmbH', W-M-19, y+12, {sz:7, c:WHITE, al:'center'});
+  }
+  // Firmeninfo rechts unter Logo
+  tx('Wirthbau GmbH', W-M, y+20, {sz:8, b:true, c:BLACK, al:'right'});
+  tx('Hauptstr.38', W-M, y+25, {sz:8, c:BLACK, al:'right'});
+  tx('55743 Hintertiefenbach', W-M, y+30, {sz:8, c:BLACK, al:'right'});
+  y += 18;
+
+  ln(M, y, W-M, y, MGRAY); y += 3;
+
+  // ── KOPFDATEN TABELLE ──
+  // Zeile 1: Auftraggeber | Datum | Wetter
+  const col1=M, col2=M+38, col3=M+38+48, col4=M+38+48+22, col5=M+38+48+22+40, col6=col5+14;
+  const rowH = 8;
+
+  // Auftraggeber
+  rfs(col1,y,38,rowH,LGRAY,MGRAY);
+  tx('Auftraggeber:',col1+1.5,y+5.5,{sz:8,b:true});
+  rfs(col2,y,48,rowH,WHITE,MGRAY);
+  const agLines = doc.splitTextToSize(data.auftraggeber||'–', 44);
+  tx(agLines[0]||'',col2+2,y+5.5,{sz:8});
+  // Datum
+  rfs(col3,y,22,rowH,LGRAY,MGRAY);
+  tx('Datum:',col3+1.5,y+5.5,{sz:8,b:true});
+  rfs(col4,y,40,rowH,WHITE,MGRAY);
+  tx(datumText,col4+2,y+5.5,{sz:8});
+  // Wetter
+  rfs(col5,y,14,rowH,LGRAY,MGRAY);
+  tx('Wetter:',col5+1.5,y+5.5,{sz:7,b:true});
+  const wCol = col5+14;
+  rfs(wCol,y,W-M-wCol,rowH,WHITE,MGRAY);
+  tx(data.wetter,wCol+2,y+5.5,{sz:8});
+  y += rowH;
+
+  // Zeile 2: Art | Straße | PLZ/Ort
+  rfs(col1,y,38,rowH,LGRAY,MGRAY);
+  tx('Art der Baustelle:',col1+1.5,y+5.5,{sz:7,b:true});
+  rfs(col2,y,30,rowH,WHITE,MGRAY);
+  tx(data.art,col2+2,y+5.5,{sz:8});
+  rfs(col2+30,y,16,rowH,LGRAY,MGRAY);
+  tx('Straße:',col2+31.5,y+5.5,{sz:7,b:true});
+  rfs(col2+46,y,52,rowH,WHITE,MGRAY);
+  const stLines = doc.splitTextToSize(data.strasse||'–', 48);
+  tx(stLines[0]||'',col2+48,y+5.5,{sz:8});
+  rfs(col2+98,y,14,rowH,LGRAY,MGRAY);
+  tx('PLZ/Ort:',col2+99,y+5.5,{sz:6,b:true});
+  rfs(col2+112,y,W-M-col2-112,rowH,WHITE,MGRAY);
+  tx(data.plzort||'–',col2+114,y+5.5,{sz:8});
+  y += rowH;
+
+  // Zeile 3: Ansprechpartner
+  rfs(col1,y,38,rowH,LGRAY,MGRAY);
+  tx('Ansprechpartner:',col1+1.5,y+5.5,{sz:7,b:true});
+  rfs(col2,y,W-M-col2,rowH,WHITE,MGRAY);
+  tx(data.ansprechpartner||'–',col2+2,y+5.5,{sz:8});
+  y += rowH + 3;
+
+  // ── ABSCHNITT HEADER: PERSONAL ──
+  rf(M,y,CW,6,DGRAY);
+  tx('Personal und Maschinenstundeneinsatz :', M+3, y+4.2, {sz:8,b:true,c:WHITE});
+  y += 7;
+
+  // Arbeitszeit + Abrechnungsart Zeile
+  rfs(M,y,CW,7,LGRAY,MGRAY);
+  tx('Arbeitszeit',M+2,y+5,{sz:8,b:true});
+  tx('von',M+28,y+5,{sz:8});
+  tx(data.azVon,M+36,y+5,{sz:8,b:true,c:PETROL});
+  tx('Uhr  Bis',M+48,y+5,{sz:8});
+  tx(data.azBis,M+65,y+5,{sz:8,b:true,c:PETROL});
+  tx('Uhr',M+76,y+5,{sz:8});
+  tx('Abrechnungsart:',M+95,y+5,{sz:8,b:true});
+  tx(data.abrechnungsart,M+128,y+5,{sz:8,b:true,c:PETROL});
+  y += 8;
+
+  // Tabellen-Header Personal | Maschinen
+  const HW = CW/2 - 1; // Half width with gap
+  const MX = M + HW + 2; // Maschinen start X
+
+  // Personal Header
+  rfs(M,y,HW,6,LGRAY,MGRAY);
+  tx('eingesetztes Personal',M+2,y+4.3,{sz:8,b:true});
+  tx('Von',M+42,y+4.3,{sz:7,b:true});
+  tx('Bis',M+55,y+4.3,{sz:7,b:true});
+  tx('Pause',M+67,y+4.3,{sz:7,b:true});
+  tx('Stunden',M+HW-14,y+4.3,{sz:7,b:true});
+
+  // Maschinen Header
+  rfs(MX,y,HW,6,LGRAY,MGRAY);
+  tx('Eingesetzte Maschinen',MX+2,y+4.3,{sz:8,b:true});
+  tx('Von',MX+42,y+4.3,{sz:7,b:true});
+  tx('Bis',MX+54,y+4.3,{sz:7,b:true});
+  tx('Stunden',MX+HW-14,y+4.3,{sz:7,b:true});
+  y += 7;
+
+  // Daten-Zeilen
+  const maxRows = Math.max(data.personal.length, data.maschinen.length, 5);
+  for (let i = 0; i < maxRows; i++) {
+    const bg = i%2===0 ? WHITE : [248,251,252];
+    rfs(M,y,HW,7,bg,MGRAY,0.15);
+    rfs(MX,y,HW,7,bg,MGRAY,0.15);
+
+    if (data.personal[i]) {
+      const p = data.personal[i];
+      tx(p.name||'',M+2,y+5,{sz:8});
+      tx(p.von,M+42,y+5,{sz:8});
+      tx(p.bis,M+55,y+5,{sz:8});
+      tx(p.pause||'0',M+69,y+5,{sz:8});
+      tx(p.stunden,M+HW-2,y+5,{sz:9,b:true,c:PETROL,al:'right'});
+    }
+    if (data.maschinen[i]) {
+      const m = data.maschinen[i];
+      tx(m.name||'',MX+2,y+5,{sz:8});
+      tx(m.von,MX+42,y+5,{sz:8});
+      tx(m.bis,MX+54,y+5,{sz:8});
+      tx(m.stunden,MX+HW-2,y+5,{sz:9,b:true,c:PETROL,al:'right'});
+    }
+    y += 7;
+  }
+
+  // Gesamtstunden Zeile
+  rfs(M,y,HW,7,PETROL_L,PETROL,0.3);
+  tx('Gesamtstunden Personal:',M+2,y+5,{sz:8,b:true,c:PETROL_D});
+  tx(data.gesamtstundenPersonal,M+HW-2,y+5,{sz:9,b:true,c:PETROL,al:'right'});
+  rfs(MX,y,HW,7,PETROL_L,PETROL,0.3);
+  tx('Gesamtstunden Maschinen:',MX+2,y+5,{sz:8,b:true,c:PETROL_D});
+  tx(data.gesamtstundenMaschinen,MX+HW-2,y+5,{sz:9,b:true,c:PETROL,al:'right'});
+  y += 10;
+
+  // ── MATERIAL ──
+  rf(M,y,CW,6,DGRAY);
+  tx('Materialeinsatz :', M+3, y+4.2, {sz:8,b:true,c:WHITE});
+  y += 7;
+
+  // Material Header
+  rfs(M,y,HW,6,LGRAY,MGRAY);
+  tx('Verbautes Material',M+2,y+4.3,{sz:8,b:true});
+  tx('Menge',M+42,y+4.3,{sz:7,b:true});
+  tx('Einheit',M+58,y+4.3,{sz:7,b:true});
+  rfs(MX,y,HW,6,LGRAY,MGRAY);
+  tx('Aushub/Entsorgung Material',MX+2,y+4.3,{sz:8,b:true});
+  tx('Menge',MX+48,y+4.3,{sz:7,b:true});
+  tx('Einheit',MX+62,y+4.3,{sz:7,b:true});
+  y += 7;
+
+  const matMax = Math.max(data.material.length, data.entsorgung.length, 6);
+  for (let i = 0; i < matMax; i++) {
+    const bg = i%2===0 ? WHITE : [248,251,252];
+    rfs(M,y,HW,7,bg,MGRAY,0.15);
+    rfs(MX,y,HW,7,bg,MGRAY,0.15);
+    if (data.material[i]) {
+      const m=data.material[i];
+      tx(m.name||'',M+2,y+5,{sz:8});
+      if(m.menge) tx(m.menge,M+50,y+5,{sz:8,al:'right'});
+      tx(m.einheit||'',M+52,y+5,{sz:8});
+    }
+    if (data.entsorgung[i]) {
+      const e=data.entsorgung[i];
+      tx(e.name||'',MX+2,y+5,{sz:8});
+      if(e.menge) tx(e.menge,MX+56,y+5,{sz:8,al:'right'});
+      tx(e.einheit||'',MX+58,y+5,{sz:8});
+    }
+    y += 7;
+  }
+  y += 3;
+
+  // ── LEISTUNG ──
+  rf(M,y,CW,6,DGRAY);
+  tx('Leistung /Abrechenbare Positionen/ Fremdleistungen', M+3, y+4.2, {sz:8,b:true,c:WHITE});
+  y += 7;
+  const leistLines = doc.splitTextToSize(data.leistung||'', CW-6);
+  const leistH = Math.max(leistLines.length * 4.5 + 5, 20);
+  rfs(M,y,CW,leistH,WHITE,MGRAY);
+  if (data.leistung) {
+    leistLines.forEach((line,i) => tx(line, M+3, y+5+i*4.5, {sz:8}));
+  }
+  y += leistH + 3;
+
+  // ── BESONDERHEITEN ──
+  rf(M,y,CW,6,DGRAY);
+  tx('Besonderheiten / Änderungen / Absprachen', M+3, y+4.2, {sz:8,b:true,c:WHITE});
+  y += 7;
+  const besLines = doc.splitTextToSize(data.besonderheiten||'', CW-6);
+  const besH = Math.max(besLines.length * 4.5 + 5, 16);
+  rfs(M,y,CW,besH,WHITE,MGRAY);
+  if (data.besonderheiten) {
+    besLines.forEach((line,i) => tx(line, M+3, y+5+i*4.5, {sz:8}));
+  }
+  y += besH + 4;
+
+  // ── UNTERSCHRIFT ──
+  // Ensure enough space, add page if needed
+  if (y > H - 30) { doc.addPage(); y = M; }
+  ln(M, y+14, M+70, y+14, BLACK, 0.4);
+  tx('Datum / Unterschrift  Polier / Bauleiter', M, y+19, {sz:8,b:true});
+  if (data.polier) tx(data.polier, M, y+26, {sz:9});
+  y += 30;
+
+  // ── FOOTER ──
+  const footY = H - 8;
+  ln(M, footY-3, W-M, footY-3, MGRAY, 0.2);
+  tx(`Wirthbau GmbH | Hauptstraße 38 | 55743 Hintertiefenbach | 016094693974 | info@wirthbau.de`, W/2, footY, {sz:7,c:[130,130,130],al:'center'});
+
+  doc.save(`Bautagesbericht_${data.datum||'Datum'}.pdf`);
+  showToast('📄 PDF wird heruntergeladen!');
+}
+
+// RESET
+function resetForm() {
+  if (!confirm('Neuen Bericht anlegen? Alle Daten werden gelöscht.')) return;
+  ['personal-list','maschinen-list','material-list','entsorgung-list'].forEach(id=>document.getElementById(id).innerHTML='');
+  ['leistung','besonderheiten','polier'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('datum').value = new Date().toISOString().split('T')[0];
+  for(let i=0;i<6;i++){const b=document.getElementById(`sb${i}`);b.classList.remove('done','active');b.querySelector('.sn').textContent=i+1;}
+  step=0; goTo(0); updateHeader();
+  showToast('✓ Formular zurückgesetzt');
+}
+
+function showToast(msg,err=false) {
+  const t=document.getElementById('toast'); t.textContent=msg; t.className='toast'+(err?' err':'');
+  t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),3500);
+}
+</script>
+</body>
+</html>
