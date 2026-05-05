@@ -171,6 +171,32 @@
   .combo-option { padding: 9px 12px; font-size: 14px; cursor: pointer; color: var(--text); border-bottom: 1px solid var(--border); transition: background 0.1s; }
   .combo-option:last-child { border-bottom: none; }
   .combo-option:hover { background: var(--petrol-faint); color: var(--petrol-light); }
+
+  /* ── ARCHIV PANEL ── */
+  .archiv-btn { background: none; border: 1.5px solid var(--petrol); border-radius: 8px; color: var(--petrol-light); font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 11px; letter-spacing: 1px; text-transform: uppercase; padding: 6px 10px; cursor: pointer; display: flex; align-items: center; gap: 5px; transition: all 0.15s; white-space: nowrap; }
+  .archiv-btn:hover { background: var(--petrol-faint); }
+  .archiv-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 500; display: none; }
+  .archiv-overlay.open { display: block; }
+  .archiv-panel { position: fixed; top: 0; right: -100%; width: min(360px, 100vw); height: 100%; background: var(--surface); z-index: 501; transition: right 0.3s ease; display: flex; flex-direction: column; box-shadow: -4px 0 24px rgba(0,0,0,0.3); }
+  .archiv-panel.open { right: 0; }
+  .archiv-header { background: var(--petrol); padding: 16px; display: flex; align-items: center; justify-content: space-between; }
+  .archiv-header h2 { color: white; font-family: 'Barlow Condensed', sans-serif; font-size: 16px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; margin: 0; }
+  .archiv-close { background: none; border: none; color: white; font-size: 22px; cursor: pointer; padding: 0 4px; line-height: 1; }
+  .archiv-url-row { padding: 12px 16px; background: var(--surface2); border-bottom: 1px solid var(--border); font-size: 12px; }
+  .archiv-url-label { color: var(--text-muted); margin-bottom: 4px; }
+  .archiv-url-input { width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-size: 11px; padding: 6px 8px; box-sizing: border-box; }
+  .archiv-load-btn { margin-top: 6px; background: var(--petrol); color: white; border: none; border-radius: 6px; padding: 7px 14px; font-size: 12px; font-weight: 700; cursor: pointer; width: 100%; }
+  .archiv-list { flex: 1; overflow-y: auto; padding: 8px 0; }
+  .archiv-empty { text-align: center; color: var(--text-muted); font-size: 13px; padding: 40px 20px; }
+  .archiv-item { padding: 12px 16px; border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.1s; display: flex; flex-direction: column; gap: 3px; }
+  .archiv-item:hover { background: var(--petrol-faint); }
+  .archiv-item .ai-date { font-size: 12px; font-weight: 700; color: var(--petrol-light); }
+  .archiv-item .ai-bs { font-size: 14px; color: var(--text); font-weight: 600; }
+  .archiv-item .ai-ag { font-size: 11px; color: var(--text-muted); }
+  .archiv-item .ai-info { font-size: 11px; color: var(--text-dim); }
+  .archiv-loading { text-align: center; padding: 30px; color: var(--text-muted); font-size: 13px; }
+  .archiv-spinner { display: inline-block; width: 24px; height: 24px; border: 3px solid var(--border); border-top-color: var(--petrol); border-radius: 50%; animation: spin 0.7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
   @media (max-width: 380px) {
     .p-times { grid-template-columns: 1fr 1fr; }
     .m-row-inner { grid-template-columns: 1fr 65px 65px 44px; }
@@ -189,6 +215,7 @@
     <div class="hdr-right">
       <strong id="hdr-date">–</strong>
       <span id="hdr-bs">–</span>
+      <button class="archiv-btn" onclick="openArchiv()">📂 Archiv</button>
     </div>
   </div>
 </header>
@@ -975,6 +1002,180 @@ document.addEventListener('click', (e) => {
   }
 });
 
+
+// ════════════════════════════════════════════════════════
+//  ARCHIV FUNKTIONEN
+// ════════════════════════════════════════════════════════
+
+function openArchiv() {
+  document.getElementById('archiv-overlay').classList.add('open');
+  document.getElementById('archiv-panel').classList.add('open');
+  // URL aus Sheets-Feld übernehmen falls vorhanden
+  const u = document.getElementById('sheets-url')?.value?.trim();
+  if (u) document.getElementById('archiv-url-input').value = u;
+}
+
+function closeArchiv() {
+  document.getElementById('archiv-overlay').classList.remove('open');
+  document.getElementById('archiv-panel').classList.remove('open');
+}
+
+async function ladeArchivListe() {
+  const url = document.getElementById('archiv-url-input').value.trim();
+  if (!url) { alert('Bitte zuerst die Sheets-URL eingeben.'); return; }
+
+  const list = document.getElementById('archiv-list');
+  list.innerHTML = '<div class="archiv-loading"><div class="archiv-spinner"></div><br>Berichte werden geladen...</div>';
+
+  try {
+    const res = await fetch(url + '?action=list', { method: 'GET' });
+    const data = await res.json();
+
+    if (!data.success || !data.berichte || data.berichte.length === 0) {
+      list.innerHTML = '<div class="archiv-empty">Keine Berichte gefunden.<br>Senden Sie zuerst einen Bericht.</div>';
+      return;
+    }
+
+    // Sortiert nach Datum (neueste zuerst)
+    const sorted = data.berichte.sort((a, b) => (b.datum || '').localeCompare(a.datum || ''));
+
+    list.innerHTML = sorted.map(b => `
+      <div class="archiv-item" onclick="ladeBericht('${encodeURIComponent(b.tab)}', '${encodeURIComponent(url)}')">
+        <div class="ai-date">${b.datumDE || b.datum || '–'}</div>
+        <div class="ai-bs">${b.baustelle || '–'}</div>
+        <div class="ai-ag">${b.auftraggeber || ''}</div>
+        <div class="ai-info">${b.personal || ''} · ${b.stunden || ''}</div>
+      </div>
+    `).join('');
+  } catch(e) {
+    list.innerHTML = '<div class="archiv-empty">Fehler beim Laden.<br>URL prüfen und erneut versuchen.<br><small>' + e.message + '</small></div>';
+  }
+}
+
+async function ladeBericht(tabEncoded, urlEncoded) {
+  const tab = decodeURIComponent(tabEncoded);
+  const url = decodeURIComponent(urlEncoded);
+
+  if (!confirm('Bericht "' + tab + '" laden?\nAktuelle Eingaben werden überschrieben.')) return;
+
+  const list = document.getElementById('archiv-list');
+  list.innerHTML = '<div class="archiv-loading"><div class="archiv-spinner"></div><br>Bericht wird geladen...</div>';
+
+  try {
+    const res = await fetch(url + '?action=load&tab=' + encodeURIComponent(tab));
+    const data = await res.json();
+
+    if (!data.success || !data.bericht) {
+      alert('Fehler: Bericht konnte nicht geladen werden.');
+      await ladeArchivListe();
+      return;
+    }
+
+    fuellFormularMitDaten(data.bericht);
+    closeArchiv();
+    goTo(0);
+
+    // URL auch im Sheets-Feld speichern
+    const sheetsInput = document.getElementById('sheets-url');
+    if (sheetsInput) { sheetsInput.value = url; localStorage.setItem('wb_sheets_url', url); }
+
+    setTimeout(() => buildSummary(), 300);
+  } catch(e) {
+    alert('Fehler beim Laden: ' + e.message);
+    await ladeArchivListe();
+  }
+}
+
+function fuellFormularMitDaten(d) {
+  // Kopfdaten
+  if (d.datum)           document.getElementById('datum').value          = d.datum;
+  if (d.auftraggeber)    document.getElementById('auftraggeber').value    = d.auftraggeber;
+  if (d.strasse)         document.getElementById('strasse').value         = d.strasse;
+  if (d.plzort)          document.getElementById('plzort').value          = d.plzort;
+  if (d.art)             document.getElementById('art').value             = d.art;
+  if (d.ansprechpartner) document.getElementById('ansp').value            = d.ansprechpartner;
+
+  // Wetter
+  if (d.wetter) {
+    document.querySelectorAll('#wpills .pill').forEach(p => {
+      p.classList.toggle('sel', p.textContent.trim() === d.wetter);
+    });
+    wetter = d.wetter;
+  }
+
+  // Abrechnungsart
+  if (d.abrechnungsart) {
+    document.querySelectorAll('.ab-pill').forEach(p => {
+      p.classList.toggle('sel', p.textContent.trim() === d.abrechnungsart);
+    });
+    abr = d.abrechnungsart;
+  }
+
+  // Arbeitszeiten
+  if (d.arbeitsvon) {
+    const avEl = document.querySelector('#personal-list .p-von') || document.querySelector('[id*="arbvon"]');
+    // Arbeitszeit wird über das erste Personal-Feld gesetzt
+  }
+
+  // Personal
+  document.getElementById('personal-list').innerHTML = '';
+  (d.personal || []).forEach(p => {
+    addPersonal(p.name || '');
+    const row = document.getElementById('personal-list').lastElementChild;
+    if (!row) return;
+    const times = row.querySelectorAll('input[type="time"]');
+    if (times[0]) times[0].value = p.von || '';
+    if (times[1]) times[1].value = p.bis || '';
+    const pauseEl = row.querySelector('.p-pause');
+    if (pauseEl) pauseEl.value = p.pause || '0.5';
+    calcP(row);
+  });
+  updTotP();
+
+  // Maschinen
+  document.getElementById('maschinen-list').innerHTML = '';
+  (d.maschinen || []).forEach(m => {
+    addMaschine(m.name || '');
+    const row = document.getElementById('maschinen-list').lastElementChild;
+    if (!row) return;
+    const times = row.querySelectorAll('input[type="time"]');
+    if (times[0]) times[0].value = m.von || '';
+    if (times[1]) times[1].value = m.bis || '';
+    calcM(row);
+  });
+  updTotM();
+
+  // Material
+  document.getElementById('material-list').innerHTML = '';
+  (d.material || []).forEach(mat => {
+    addMaterial(mat.name || '');
+    const row = document.getElementById('material-list').lastElementChild;
+    if (!row) return;
+    const numEl = row.querySelector('input[type="number"]');
+    const selEl = row.querySelector('select');
+    if (numEl) numEl.value = mat.menge || '';
+    if (selEl) selEl.value = mat.einheit || 'm³';
+  });
+
+  // Entsorgung
+  document.getElementById('entsorgung-list').innerHTML = '';
+  (d.entsorgung || []).forEach(e => {
+    addEntsorgung(e.name || '');
+    const row = document.getElementById('entsorgung-list').lastElementChild;
+    if (!row) return;
+    const numEl = row.querySelector('input[type="number"]');
+    const selEl = row.querySelector('select');
+    if (numEl) numEl.value = e.menge || '';
+    if (selEl) selEl.value = e.einheit || 'm³';
+  });
+
+  // Leistung & Besonderheiten
+  if (d.leistung)         document.getElementById('leistung').value        = d.leistung;
+  if (d.besonderheiten)   document.getElementById('besonderheiten').value  = d.besonderheiten;
+
+  updateHeader();
+}
+
 // RESET
 function resetForm() {
   if (!confirm('Neuen Bericht anlegen? Alle Daten werden gelöscht.')) return;
@@ -991,5 +1192,23 @@ function showToast(msg,err=false) {
   t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),3500);
 }
 </script>
+
+<!-- ── ARCHIV PANEL ── -->
+<div class="archiv-overlay" id="archiv-overlay" onclick="closeArchiv()"></div>
+<div class="archiv-panel" id="archiv-panel">
+  <div class="archiv-header">
+    <h2>📂 Archiv</h2>
+    <button class="archiv-close" onclick="closeArchiv()">✕</button>
+  </div>
+  <div class="archiv-url-row">
+    <div class="archiv-url-label">Sheets-URL (zum Laden der Berichte):</div>
+    <input type="text" class="archiv-url-input" id="archiv-url-input" placeholder="https://script.google.com/macros/s/...">
+    <button class="archiv-load-btn" onclick="ladeArchivListe()">📋 Berichte laden</button>
+  </div>
+  <div class="archiv-list" id="archiv-list">
+    <div class="archiv-empty">URL eingeben und auf "Berichte laden" klicken</div>
+  </div>
+</div>
+
 </body>
 </html>
