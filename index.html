@@ -182,21 +182,21 @@
   .archiv-header { background: var(--petrol); padding: 16px; display: flex; align-items: center; justify-content: space-between; }
   .archiv-header h2 { color: white; font-family: 'Barlow Condensed', sans-serif; font-size: 16px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; margin: 0; }
   .archiv-close { background: none; border: none; color: white; font-size: 22px; cursor: pointer; padding: 0 4px; line-height: 1; }
-  .archiv-url-row { padding: 12px 16px; background: var(--surface2); border-bottom: 1px solid var(--border); font-size: 12px; }
-  .archiv-url-label { color: var(--text-muted); margin-bottom: 4px; }
+  .archiv-url-row { padding: 12px 16px; background: var(--surface2); border-bottom: 1px solid var(--border); }
+  .archiv-url-label { color: var(--text-muted); margin-bottom: 4px; font-size: 11px; }
   .archiv-url-input { width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-size: 11px; padding: 6px 8px; box-sizing: border-box; }
-  .archiv-load-btn { margin-top: 6px; background: var(--petrol); color: white; border: none; border-radius: 6px; padding: 7px 14px; font-size: 12px; font-weight: 700; cursor: pointer; width: 100%; }
+  .archiv-load-btn { margin-top: 6px; background: var(--petrol); color: white; border: none; border-radius: 6px; padding: 8px 14px; font-size: 12px; font-weight: 700; cursor: pointer; width: 100%; font-family: 'Barlow Condensed', sans-serif; letter-spacing: 0.5px; }
   .archiv-list { flex: 1; overflow-y: auto; padding: 8px 0; }
-  .archiv-empty { text-align: center; color: var(--text-muted); font-size: 13px; padding: 40px 20px; }
-  .archiv-item { padding: 12px 16px; border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.1s; display: flex; flex-direction: column; gap: 3px; }
+  .archiv-empty { text-align: center; color: var(--text-muted); font-size: 13px; padding: 40px 20px; line-height: 1.6; }
+  .archiv-item { padding: 12px 16px; border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.1s; }
   .archiv-item:hover { background: var(--petrol-faint); }
   .archiv-item .ai-date { font-size: 12px; font-weight: 700; color: var(--petrol-light); }
-  .archiv-item .ai-bs { font-size: 14px; color: var(--text); font-weight: 600; }
+  .archiv-item .ai-bs { font-size: 14px; color: var(--text); font-weight: 600; margin: 2px 0; }
   .archiv-item .ai-ag { font-size: 11px; color: var(--text-muted); }
-  .archiv-item .ai-info { font-size: 11px; color: var(--text-dim); }
+  .archiv-item .ai-info { font-size: 11px; color: var(--text-dim); margin-top: 2px; }
   .archiv-loading { text-align: center; padding: 30px; color: var(--text-muted); font-size: 13px; }
-  .archiv-spinner { display: inline-block; width: 24px; height: 24px; border: 3px solid var(--border); border-top-color: var(--petrol); border-radius: 50%; animation: spin 0.7s linear infinite; }
-  @keyframes spin { to { transform: rotate(360deg); } }
+  .archiv-spinner { display: inline-block; width: 24px; height: 24px; border: 3px solid var(--border); border-top-color: var(--petrol); border-radius: 50%; animation: archiv-spin 0.7s linear infinite; }
+  @keyframes archiv-spin { to { transform: rotate(360deg); } }
   @media (max-width: 380px) {
     .p-times { grid-template-columns: 1fr 1fr; }
     .m-row-inner { grid-template-columns: 1fr 65px 65px 44px; }
@@ -1002,15 +1002,16 @@ document.addEventListener('click', (e) => {
   }
 });
 
+// RESET
 
 // ════════════════════════════════════════════════════════
-//  ARCHIV FUNKTIONEN
+//  ARCHIV — POST-basiert (löst CORS-Problem mit Google)
 // ════════════════════════════════════════════════════════
 
 function openArchiv() {
   document.getElementById('archiv-overlay').classList.add('open');
   document.getElementById('archiv-panel').classList.add('open');
-  // URL aus Sheets-Feld übernehmen falls vorhanden
+  // URL aus Sheets-Feld übernehmen
   const u = document.getElementById('sheets-url')?.value?.trim();
   if (u) document.getElementById('archiv-url-input').value = u;
 }
@@ -1028,7 +1029,14 @@ async function ladeArchivListe() {
   list.innerHTML = '<div class="archiv-loading"><div class="archiv-spinner"></div><br>Berichte werden geladen...</div>';
 
   try {
-    const res = await fetch(url + '?action=list', { method: 'GET' });
+    // POST — umgeht CORS-Redirect-Problem von Google Apps Script
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'list' })
+    });
+
+    if (!res.ok) throw new Error('HTTP ' + res.status);
     const data = await res.json();
 
     if (!data.success || !data.berichte || data.berichte.length === 0) {
@@ -1036,25 +1044,25 @@ async function ladeArchivListe() {
       return;
     }
 
-    // Sortiert nach Datum (neueste zuerst)
+    // Sortiert: neueste zuerst
     const sorted = data.berichte.sort((a, b) => (b.datum || '').localeCompare(a.datum || ''));
+    const urlEnc = encodeURIComponent(url);
 
     list.innerHTML = sorted.map(b => `
-      <div class="archiv-item" onclick="ladeBericht('${encodeURIComponent(b.tab)}', '${encodeURIComponent(url)}')">
+      <div class="archiv-item" onclick="ladeBericht('${encodeURIComponent(b.tab)}','${urlEnc}')">
         <div class="ai-date">${b.datumDE || b.datum || '–'}</div>
         <div class="ai-bs">${b.baustelle || '–'}</div>
         <div class="ai-ag">${b.auftraggeber || ''}</div>
         <div class="ai-info">${b.personal || ''} · ${b.stunden || ''}</div>
-      </div>
-    `).join('');
+      </div>`).join('');
   } catch(e) {
-    list.innerHTML = '<div class="archiv-empty">Fehler beim Laden.<br>URL prüfen und erneut versuchen.<br><small>' + e.message + '</small></div>';
+    list.innerHTML = '<div class="archiv-empty">❌ Fehler beim Laden.<br>URL prüfen und erneut versuchen.<br><small>' + e.message + '</small></div>';
   }
 }
 
-async function ladeBericht(tabEncoded, urlEncoded) {
-  const tab = decodeURIComponent(tabEncoded);
-  const url = decodeURIComponent(urlEncoded);
+async function ladeBericht(tabEnc, urlEnc) {
+  const tab = decodeURIComponent(tabEnc);
+  const url = decodeURIComponent(urlEnc);
 
   if (!confirm('Bericht "' + tab + '" laden?\nAktuelle Eingaben werden überschrieben.')) return;
 
@@ -1062,59 +1070,55 @@ async function ladeBericht(tabEncoded, urlEncoded) {
   list.innerHTML = '<div class="archiv-loading"><div class="archiv-spinner"></div><br>Bericht wird geladen...</div>';
 
   try {
-    const res = await fetch(url + '?action=load&tab=' + encodeURIComponent(tab));
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'load', tab: tab })
+    });
+
+    if (!res.ok) throw new Error('HTTP ' + res.status);
     const data = await res.json();
 
     if (!data.success || !data.bericht) {
-      alert('Fehler: Bericht konnte nicht geladen werden.');
-      await ladeArchivListe();
-      return;
+      alert('Fehler: ' + (data.error || 'Bericht nicht gefunden'));
+      await ladeArchivListe(); return;
     }
 
     fuellFormularMitDaten(data.bericht);
     closeArchiv();
     goTo(0);
 
-    // URL auch im Sheets-Feld speichern
+    // URL auch im Schritt-6-Feld speichern
     const sheetsInput = document.getElementById('sheets-url');
     if (sheetsInput) { sheetsInput.value = url; localStorage.setItem('wb_sheets_url', url); }
 
     setTimeout(() => buildSummary(), 300);
   } catch(e) {
-    alert('Fehler beim Laden: ' + e.message);
+    alert('Fehler: ' + e.message);
     await ladeArchivListe();
   }
 }
 
 function fuellFormularMitDaten(d) {
   // Kopfdaten
-  if (d.datum)           document.getElementById('datum').value          = d.datum;
-  if (d.auftraggeber)    document.getElementById('auftraggeber').value    = d.auftraggeber;
-  if (d.strasse)         document.getElementById('strasse').value         = d.strasse;
-  if (d.plzort)          document.getElementById('plzort').value          = d.plzort;
-  if (d.art)             document.getElementById('art').value             = d.art;
-  if (d.ansprechpartner) document.getElementById('ansp').value            = d.ansprechpartner;
+  const set = (id, val) => { const el = document.getElementById(id); if (el && val !== undefined) el.value = val; };
+  set('datum',         d.datum);
+  set('auftraggeber',  d.auftraggeber);
+  set('strasse',       d.strasse);
+  set('plzort',        d.plzort);
+  set('art',           d.art);
+  set('ansp',          d.ansprechpartner);
 
   // Wetter
   if (d.wetter) {
-    document.querySelectorAll('#wpills .pill').forEach(p => {
-      p.classList.toggle('sel', p.textContent.trim() === d.wetter);
-    });
+    document.querySelectorAll('#wpills .pill').forEach(p => p.classList.toggle('sel', p.textContent.trim() === d.wetter));
     wetter = d.wetter;
   }
 
   // Abrechnungsart
   if (d.abrechnungsart) {
-    document.querySelectorAll('.ab-pill').forEach(p => {
-      p.classList.toggle('sel', p.textContent.trim() === d.abrechnungsart);
-    });
+    document.querySelectorAll('.ab-pill').forEach(p => p.classList.toggle('sel', p.textContent.trim() === d.abrechnungsart));
     abr = d.abrechnungsart;
-  }
-
-  // Arbeitszeiten
-  if (d.arbeitsvon) {
-    const avEl = document.querySelector('#personal-list .p-von') || document.querySelector('[id*="arbvon"]');
-    // Arbeitszeit wird über das erste Personal-Feld gesetzt
   }
 
   // Personal
@@ -1158,25 +1162,27 @@ function fuellFormularMitDaten(d) {
   });
 
   // Entsorgung
-  document.getElementById('entsorgung-list').innerHTML = '';
-  (d.entsorgung || []).forEach(e => {
-    addEntsorgung(e.name || '');
-    const row = document.getElementById('entsorgung-list').lastElementChild;
-    if (!row) return;
-    const numEl = row.querySelector('input[type="number"]');
-    const selEl = row.querySelector('select');
-    if (numEl) numEl.value = e.menge || '';
-    if (selEl) selEl.value = e.einheit || 'm³';
-  });
+  const entList = document.getElementById('entsorgung-list');
+  if (entList) {
+    entList.innerHTML = '';
+    (d.entsorgung || []).forEach(e => {
+      addEntsorgung(e.name || '');
+      const row = entList.lastElementChild;
+      if (!row) return;
+      const numEl = row.querySelector('input[type="number"]');
+      const selEl = row.querySelector('select');
+      if (numEl) numEl.value = e.menge || '';
+      if (selEl) selEl.value = e.einheit || 'm³';
+    });
+  }
 
   // Leistung & Besonderheiten
-  if (d.leistung)         document.getElementById('leistung').value        = d.leistung;
-  if (d.besonderheiten)   document.getElementById('besonderheiten').value  = d.besonderheiten;
+  set('leistung',       d.leistung);
+  set('besonderheiten', d.besonderheiten);
 
   updateHeader();
 }
 
-// RESET
 function resetForm() {
   if (!confirm('Neuen Bericht anlegen? Alle Daten werden gelöscht.')) return;
   ['personal-list','maschinen-list','material-list','entsorgung-list'].forEach(id=>document.getElementById(id).innerHTML='');
@@ -1193,7 +1199,7 @@ function showToast(msg,err=false) {
 }
 </script>
 
-<!-- ── ARCHIV PANEL ── -->
+<!-- ══ ARCHIV PANEL ══ -->
 <div class="archiv-overlay" id="archiv-overlay" onclick="closeArchiv()"></div>
 <div class="archiv-panel" id="archiv-panel">
   <div class="archiv-header">
@@ -1201,14 +1207,13 @@ function showToast(msg,err=false) {
     <button class="archiv-close" onclick="closeArchiv()">✕</button>
   </div>
   <div class="archiv-url-row">
-    <div class="archiv-url-label">Sheets-URL (zum Laden der Berichte):</div>
+    <div class="archiv-url-label">Google Sheets URL:</div>
     <input type="text" class="archiv-url-input" id="archiv-url-input" placeholder="https://script.google.com/macros/s/...">
     <button class="archiv-load-btn" onclick="ladeArchivListe()">📋 Berichte laden</button>
   </div>
   <div class="archiv-list" id="archiv-list">
-    <div class="archiv-empty">URL eingeben und auf "Berichte laden" klicken</div>
+    <div class="archiv-empty">URL eingeben und auf<br>"Berichte laden" klicken</div>
   </div>
 </div>
-
 </body>
 </html>
